@@ -79,7 +79,7 @@ const Register = () => {
 
     setIsLoading(true);
     try {
-      const response = await axios.post('https://zeta-connect-api.vercel.app/api/auth/register', {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
         name: formData.name,
         email: formData.email,
         password: formData.password,

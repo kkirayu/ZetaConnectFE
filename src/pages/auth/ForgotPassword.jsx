@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Popup from '../../components/Popup';
 
 const ForgotPassword = () => {
@@ -12,8 +13,9 @@ const ForgotPassword = () => {
   
   // Form Data
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
+  const inputRefs = useRef([]);
   const [confirmPassword, setConfirmPassword] = useState('');
   
   // Error state
@@ -28,43 +30,70 @@ const ForgotPassword = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleEmailSubmit = (e) => {
+  const handleOtpChange = (index, e) => {
+    const value = e.target.value;
+    if (isNaN(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    if (value !== '' && index < 5) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    // Mock validation: fail if email doesn't have @
     if (!email.includes('@')) {
-      setError('Format email tidak valid atau email tidak terdaftar.');
+      setError('Format email tidak valid.');
       return;
     }
     
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/forgot-password`, { email });
       setIsLoading(false);
       setStep(2);
-    }, 1000);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.response?.data?.message || 'Gagal mengirim kode reset.');
+    }
   };
 
-  const handleCodeSubmit = (e) => {
+  const handleCodeSubmit = async (e) => {
     e.preventDefault();
+    const otpCode = otp.join('');
     setError('');
-    // Mock validation: fail if code is not '123456'
-    if (code !== '123456') {
-      setError('Kode reset tidak valid atau sudah kadaluarsa. (Hint: 123456)');
+    if (otpCode.length !== 6) {
+      setError('Kode reset harus 6 karakter.');
       return;
     }
     
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/check-otp`, { email, otp_code: otpCode });
       setIsLoading(false);
       setStep(3);
-    }, 1000);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.response?.data?.message || 'Kode reset tidak valid atau sudah kadaluarsa.');
+    }
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
+    const otpCode = otp.join('');
     setError('');
-    if (newPassword.length < 6) {
-      setError('Kata sandi minimal 6 karakter.');
+    if (newPassword.length < 8) {
+      setError('Kata sandi minimal 8 karakter.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -73,7 +102,12 @@ const ForgotPassword = () => {
     }
     
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/reset-password`, { 
+        email, 
+        otp_code: otpCode, 
+        password: newPassword 
+      });
       setIsLoading(false);
       setPopup({
         isOpen: true,
@@ -85,7 +119,10 @@ const ForgotPassword = () => {
           navigate('/login');
         }
       });
-    }, 1500);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.response?.data?.message || 'Gagal mengubah kata sandi.');
+    }
   };
 
   return (
@@ -175,29 +212,29 @@ const ForgotPassword = () => {
 
             {/* Step 2: Input Code */}
             {step === 2 && (
-              <form onSubmit={handleCodeSubmit} className="space-y-6 relative z-10">
+              <form onSubmit={handleCodeSubmit} className="space-y-8 relative z-10">
                 <div>
-                  <label className="block text-sm font-bold text-slate-800 mb-2">Kode Reset</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                      <i className="fa-solid fa-hashtag"></i>
-                    </div>
-                    <input 
-                      type="text" 
-                      required
-                      value={code}
-                      onChange={(e) => { setCode(e.target.value); setError(''); }}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition-all text-center tracking-widest text-lg font-bold"
-                      placeholder="123456"
-                      maxLength={6}
-                    />
+                  <label className="block text-sm font-bold text-slate-800 mb-4 text-center">Masukkan 6 Digit Kode Reset</label>
+                  <div className="flex justify-center gap-2 sm:gap-4">
+                    {otp.map((digit, index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength={1}
+                        value={digit}
+                        ref={(el) => (inputRefs.current[index] = el)}
+                        onChange={(e) => handleOtpChange(index, e)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition-all"
+                      />
+                    ))}
                   </div>
                 </div>
                 <div className="pt-2">
                   <button 
                     type="submit" 
-                    disabled={isLoading}
-                    className={`w-full text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    disabled={otp.join('').length < 6 || isLoading}
+                    className={`w-full text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 ${otp.join('').length < 6 || isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                   >
                     {isLoading ? (
                       <><i className="fa-solid fa-spinner animate-spin"></i> Memproses...</>
@@ -227,7 +264,7 @@ const ForgotPassword = () => {
                       value={newPassword}
                       onChange={(e) => { setNewPassword(e.target.value); setError(''); }}
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 outline-none transition-all"
-                      placeholder="Minimal 6 karakter"
+                      placeholder="Minimal 8 karakter"
                     />
                   </div>
                 </div>
