@@ -61,8 +61,12 @@ const CashierDashboard = () => {
 
   const handleEdit = (e, queue) => {
     e.stopPropagation();
-    const invoiceId = queue.raw_data?.id || queue.id;
-    navigate(`/cashier/checkout?invoice_id=${invoiceId}`);
+    if (queue.type === 'appointment') {
+      navigate('/cashier/queue');
+    } else {
+      const invoiceId = queue.raw_data?.id || queue.id;
+      navigate(`/cashier/checkout?invoice_id=${invoiceId}`);
+    }
   };
 
   // 1. Statistik Ringkasan Shift Aktif
