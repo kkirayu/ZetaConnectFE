@@ -153,6 +153,8 @@ const AuditLog = () => {
                   <th className="px-6 py-4">Pengguna</th>
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Aktivitas / Tindakan</th>
+                  <th className="px-6 py-4">Endpoint API</th>
+                  <th className="px-6 py-4">Respons</th>
                   <th className="px-6 py-4 text-center">Tingkat</th>
                 </tr>
               </thead>
@@ -175,6 +177,12 @@ const AuditLog = () => {
                       <td className="px-6 py-4 text-slate-700">
                         {log.action}
                       </td>
+                      <td className="px-6 py-4 text-xs font-mono text-slate-500 max-w-[150px] truncate" title={log.endpoint || log.api || log.url || '-'}>
+                        {log.endpoint || log.api || log.url || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-500 max-w-[150px] truncate" title={typeof log.response === 'object' ? JSON.stringify(log.response) : log.response || '-'}>
+                        {typeof log.response === 'object' ? JSON.stringify(log.response) : log.response || '-'}
+                      </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
                           log.severity === 'Tinggi'
@@ -189,7 +197,7 @@ const AuditLog = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="py-10 text-center text-slate-400">
+                    <td colSpan="7" className="py-10 text-center text-slate-400">
                       Log aktivitas tidak ditemukan.
                     </td>
                   </tr>
