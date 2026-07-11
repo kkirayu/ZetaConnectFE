@@ -45,7 +45,7 @@ const BillingQueue = () => {
   const getClientName = (inv) => inv?.patient?.owner_name ?? '—';
   const getPetName = (inv) => inv?.patient?.name ?? '—';
   const getPetType = (inv) => inv?.patient?.species ?? '—';
-  const getDoctorName = (inv) => inv?.doctor_name ?? '—';
+  const getDoctorName = (inv) => inv?.doctor?.name ?? '—';
 
   const handleOpenModal = (bill) => {
     setSelectedBill(bill);
@@ -169,8 +169,10 @@ const BillingQueue = () => {
                       <tr key={queue.appointment_id || i} className="hover:bg-slate-50/50 transition-colors align-top">
                         <td className="px-6 py-4">
                           <span className="font-bold text-blue-600 block">{queue.queue_number || `#${queue.appointment_id}`}</span>
-                          <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                            Tanggal: {new Date(queue.created_at).toLocaleDateString('id-ID')}
+                          <span className="text-xs text-slate-500 font-medium mt-0.5 block">
+                            Tanggal: {new Date(queue.schedule_date || queue.raw_created_at || new Date()).toLocaleDateString('id-ID', {
+                              day: 'numeric', month: 'short', year: 'numeric'
+                            })}
                           </span>
                         </td>
 
