@@ -41,6 +41,18 @@ export const getInvoices = async (params = {}) => {
 };
 
 /**
+ * Mengambil daftar tagihan tertunda (Appointment Selesai yang belum ada invoice)
+ */
+export const getPendingBilling = async () => {
+  try {
+    const response = await api.get('/cashier/pending-billing');
+    return response.data;
+  } catch (error) {
+    handleServiceError(error, 'Gagal memuat daftar tagihan tertunda.');
+  }
+};
+
+/**
  * Mengambil detail invoice berdasarkan ID
  * @param {string} id - ID invoice
  */
