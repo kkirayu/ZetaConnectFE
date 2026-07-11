@@ -209,7 +209,7 @@ const BillingQueue = () => {
                         </td>
 
                         <td className="px-6 py-4">
-                          <span className="font-bold text-slate-800">Rp {(queue.subtotal ?? 0).toLocaleString('id-ID')}</span>
+                          <span className="font-bold text-slate-800">Rp {(queue.total_estimation || 0).toLocaleString('id-ID')}</span>
                         </td>
 
                         <td className="px-6 py-4 text-right">
@@ -308,7 +308,7 @@ const BillingQueue = () => {
               <div className="flex justify-between items-center px-2">
                 <span className="text-slate-500 font-medium">Total Tagihan</span>
                 <span className="text-2xl font-bold text-blue-600">
-                  Rp {(selectedBill.subtotal || 0).toLocaleString('id-ID')}
+                  Rp {(selectedBill.total_estimation || 0).toLocaleString('id-ID')}
                 </span>
               </div>
               <div className="flex gap-3">
