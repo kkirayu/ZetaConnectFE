@@ -14,7 +14,9 @@ const ServiceRatesForm = () => {
     category: '',
     price: '',
     status: 'Tersedia',
-    description: ''
+    status: 'Tersedia',
+    description: '',
+    estimated_sessions: 1
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +34,9 @@ const ServiceRatesForm = () => {
             category: data.category || '',
             price: data.price ? String(data.price) : '',
             status: data.status || 'Tersedia',
-            description: data.description || ''
+            status: data.status || 'Tersedia',
+            description: data.description || '',
+            estimated_sessions: data.estimated_sessions || 1
           });
         } catch (error) {
           console.error('Failed to fetch service detail:', error);
@@ -78,7 +82,8 @@ const ServiceRatesForm = () => {
     try {
       const payload = {
         ...formData,
-        price: Number(formData.price)
+        price: Number(formData.price),
+        estimated_sessions: Number(formData.estimated_sessions)
       };
 
       if (isEditMode) {
@@ -200,6 +205,25 @@ const ServiceRatesForm = () => {
                       placeholder="0"
                       min="0"
                       className="w-full rounded-md border border-slate-300 bg-transparent py-2.5 pl-12 pr-4 text-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-2.5 block text-sm font-semibold text-slate-800">
+                    Estimasi Waktu Layanan (Sesi) <span className="text-red-500">*</span>
+                    <span className="ml-2 text-xs font-normal text-slate-500">(1 Sesi = 1 Jam)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="estimated_sessions"
+                      value={formData.estimated_sessions}
+                      onChange={handleChange}
+                      min="1"
+                      max="8"
+                      className="w-full rounded-md border border-slate-300 bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                       required
                     />
                   </div>

@@ -72,6 +72,9 @@ const WalkInRegistration = () => {
         if (formData.doctor_id) {
           params.append('doctor_id', formData.doctor_id);
         }
+        if (formData.service_id) {
+          params.append('service_id', formData.service_id);
+        }
         const res = await api.get(`/available-sessions?${params.toString()}`);
         setAvailableSessions(res.data.data || []);
       } catch (err) {
@@ -83,7 +86,7 @@ const WalkInRegistration = () => {
     };
 
     fetchAvailableSessions();
-  }, [formData.schedule_date, formData.doctor_id]);
+  }, [formData.schedule_date, formData.doctor_id, formData.service_id]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -293,9 +296,10 @@ const WalkInRegistration = () => {
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
 
-  const filteredSessions = availableSessions.filter(time => {
+  const filteredSessions = availableSessions.filter(item => {
+      const timeStr = typeof item === 'string' ? item : item.time;
       if (!isToday) return true;
-      const [hourStr, minuteStr] = time.split(':');
+      const [hourStr, minuteStr] = timeStr.split(':');
       const sessionHour = parseInt(hourStr, 10);
       const sessionMinute = parseInt(minuteStr, 10);
       
@@ -592,16 +596,17 @@ const WalkInRegistration = () => {
                   name="schedule_time" value={formData.schedule_time} onChange={handleChange}
                   className="w-full rounded-sm border border-slate-300 bg-transparent px-4 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                   required
-                  disabled={isLoadingSessions || !formData.schedule_date || filteredSessions.length === 0}
+                  disabled={isLoadingSessions || !formData.schedule_date || !formData.service_id || filteredSessions.length === 0}
                 >
                   <option value="" disabled>
-                    {!formData.schedule_date ? 'Pilih tanggal lebih dulu' : (isLoadingSessions ? 'Memuat jadwal...' : (filteredSessions.length === 0 ? 'Tidak ada jadwal tersedia / Sesi hari ini sudah lewat' : 'Pilih Waktu'))}
+                    {!(formData.schedule_date && formData.service_id) ? 'Pilih layanan & tanggal dulu' : (isLoadingSessions ? 'Memuat jadwal...' : (filteredSessions.length === 0 ? 'Tidak ada jadwal tersedia / Sesi hari ini sudah lewat' : 'Pilih Sesi'))}
                   </option>
-                  {filteredSessions.map((time, index) => {
-                      const endTime = (parseInt(time.split(':')[0]) + 1).toString().padStart(2, '0') + ':00';
+                  {filteredSessions.map((item, index) => {
+                      const timeStr = typeof item === 'string' ? item : item.time;
+                      const labelStr = typeof item === 'string' ? `${timeStr} WIB` : item.label;
                       return (
-                          <option key={index} value={time}>
-                              {time} - {endTime}
+                          <option key={index} value={timeStr}>
+                              {labelStr}
                           </option>
                       );
                   })}

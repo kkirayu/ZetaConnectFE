@@ -76,13 +76,13 @@ const AppointmentForm = () => {
     };
 
     useEffect(() => {
-        if (formData.schedule_date) {
+        if (formData.schedule_date && formData.service_id) {
             const fetchTimes = async () => {
                 setIsLoadingTimes(true);
                 setAvailableTimes([]);
                 setFormData(prev => ({ ...prev, schedule_time: '' }));
                 try {
-                    const res = await getAvailableSessions(formData.schedule_date);
+                    const res = await getAvailableSessions(formData.schedule_date, formData.service_id);
                     const timesArray = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
                     setAvailableTimes(timesArray);
                 } catch (e) {
@@ -95,7 +95,7 @@ const AppointmentForm = () => {
         } else {
             setAvailableTimes([]);
         }
-    }, [formData.schedule_date]);
+    }, [formData.schedule_date, formData.service_id]);
 
     // Harga layanan yang dipilih
     const selectedService = servicesData.find(s => String(s.id) === String(formData.service_id)) ?? null;
@@ -276,7 +276,9 @@ const AppointmentForm = () => {
                                 <div className="flex items-center w-full rounded-md border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-blue-700 cursor-not-allowed select-none">
                                     {selectedService ? formatRupiah(selectedService.price) : '-'}
                                 </div>
-                                <p className="mt-1 text-xs text-slate-400">Harga otomatis dari layanan yang dipilih. Tidak dapat diubah.</p>
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {selectedService?.estimated_sessions ? `Estimasi waktu: ${selectedService.estimated_sessions} Sesi.` : 'Pilih layanan untuk melihat estimasi waktu.'}
+                                </p>
                             </div>
 
                             {/* Booking Type */}
@@ -323,18 +325,20 @@ const AppointmentForm = () => {
                                     onChange={handleChange}
                                     className="w-full rounded-md border border-slate-300 bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-50 disabled:text-slate-400"
                                     required
-                                    disabled={!formData.schedule_date || isLoadingTimes}
+                                    disabled={!formData.schedule_date || !formData.service_id || isLoadingTimes}
                                 >
                                     <option value="" disabled>
-                                        {isLoadingTimes ? 'Memuat jadwal...' : (!formData.schedule_date ? 'Pilih tanggal dulu' : 'Pilih Waktu')}
+                                        {isLoadingTimes ? 'Memuat jadwal...' : (!(formData.schedule_date && formData.service_id) ? 'Pilih layanan & tanggal dulu' : 'Pilih Sesi')}
                                     </option>
                                     {availableTimes.length > 0 ? (
-                                        availableTimes.map((time, idx) => (
-                                            <option key={idx} value={time}>{time} WIB</option>
+                                        availableTimes.map((item, idx) => (
+                                            <option key={idx} value={typeof item === 'string' ? item : item.time}>
+                                                {typeof item === 'string' ? `${item} WIB` : item.label}
+                                            </option>
                                         ))
                                     ) : (
-                                        formData.schedule_date && !isLoadingTimes && (
-                                            <option value="" disabled>Jadwal penuh / tidak tersedia</option>
+                                        formData.schedule_date && formData.service_id && !isLoadingTimes && (
+                                            <option value="" disabled>Sesi penuh / tidak tersedia</option>
                                         )
                                     )}
                                 </select>
