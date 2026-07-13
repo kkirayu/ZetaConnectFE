@@ -1,13 +1,19 @@
 import axios from 'axios';
 
 const cache = new Map();
-const CACHE_TTL = 3 * 60 * 1000; // 3 minutes
-const CACHEABLE_URLS = [
-  '/services',
-  '/doctors',
-  '/pet-tips',
-  '/doctor/diagnoses'
-];
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getCacheKey = (config) => {
+  let key = config.url || '';
+  if (config.params) {
+    try {
+      key += '?' + new URLSearchParams(config.params).toString();
+    } catch (e) {
+      key += '?' + JSON.stringify(config.params);
+    }
+  }
+  return key;
+};
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -33,20 +39,33 @@ api.interceptors.request.use((config) => {
     cache.clear();
   }
 
-  // Return cached data if available and fresh
+  // Return cached data if available and fresh (SWR Pattern)
   if (config.method?.toLowerCase() === 'get' && !config.headers['X-Bypass-Cache']) {
-    const isCacheable = CACHEABLE_URLS.some(url => config.url && config.url.includes(url));
-    if (isCacheable) {
-      const cached = cache.get(config.url);
-      if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
-        config.adapter = () => Promise.resolve({
-          data: cached.data,
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: config
+    const cacheKey = getCacheKey(config);
+    const cached = cache.get(cacheKey);
+    
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+      // Fetch in background to keep cache fresh for next time
+      const backgroundConfig = { 
+        ...config, 
+        headers: { ...config.headers, 'X-Bypass-Cache': 'true' }
+      };
+      delete backgroundConfig.adapter;
+      
+      axios(backgroundConfig).then(response => {
+        cache.set(cacheKey, {
+          data: response.data,
+          timestamp: Date.now()
         });
-      }
+      }).catch(() => {});
+
+      config.adapter = () => Promise.resolve({
+        data: cached.data,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: config
+      });
     }
   }
 
@@ -59,13 +78,11 @@ api.interceptors.response.use(
   (response) => {
     const { config } = response;
     if (config.method?.toLowerCase() === 'get') {
-      const isCacheable = CACHEABLE_URLS.some(url => config.url && config.url.includes(url));
-      if (isCacheable) {
-        cache.set(config.url, {
-          data: response.data,
-          timestamp: Date.now()
-        });
-      }
+      const cacheKey = getCacheKey(config);
+      cache.set(cacheKey, {
+        data: response.data,
+        timestamp: Date.now()
+      });
     }
     return response;
   },
