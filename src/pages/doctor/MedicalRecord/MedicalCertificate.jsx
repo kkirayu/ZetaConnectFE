@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Printer, Save, FileText, Search } from 'lucide-react';
-import api from '../../services/api';
+import api from '../../../services/api';
 
 const MedicalCertificate = () => {
   const navigate = useNavigate();
