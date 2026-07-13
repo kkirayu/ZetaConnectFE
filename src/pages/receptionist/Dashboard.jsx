@@ -9,7 +9,8 @@ import {
   Activity, 
   Search, 
   Filter, 
-  Plus 
+  Plus,
+  Loader2
 } from 'lucide-react';
 
 const ReceptionistDashboard = () => {
@@ -20,6 +21,7 @@ const ReceptionistDashboard = () => {
   
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(null);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -38,6 +40,7 @@ const ReceptionistDashboard = () => {
 
   const handleAcceptBooking = async (req) => {
     try {
+      setLoadingAction({ id: req.rawId, action: 'accept' });
       await api.put(`/appointments/${req.rawId}`, { status: 'Disetujui' });
       setAppointments(appointments.map(a => a.id === req.rawId ? { ...a, status: 'Disetujui' } : a));
       setApprovedBooking(req);
@@ -46,24 +49,32 @@ const ReceptionistDashboard = () => {
       }, 3000);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const handleRejectBooking = async (id) => {
     try {
+      setLoadingAction({ id, action: 'reject' });
       await api.put(`/appointments/${id}`, { status: 'Batal' });
       setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'Batal' } : a));
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
   const handleCallPatient = async (id) => {
     try {
+      setLoadingAction({ id, action: 'call' });
       await api.put(`/appointments/${id}`, { status: 'Dalam Periksa' });
       setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'Dalam Periksa' } : a));
     } catch (err) {
       console.error("Error calling patient:", err);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -91,10 +102,13 @@ const ReceptionistDashboard = () => {
 
   const handleFinishPatient = async (id) => {
     try {
+      setLoadingAction({ id, action: 'finish' });
       await api.put(`/appointments/${id}`, { status: 'Selesai' });
       setAppointments(appointments.map(a => a.id === id ? { ...a, status: 'Selesai' } : a));
     } catch (err) {
       console.error("Error finishing patient:", err);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
@@ -250,15 +264,25 @@ const ReceptionistDashboard = () => {
                       <div className="flex justify-end gap-2">
                         <button 
                           onClick={() => handleAcceptBooking(req)}
-                          className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700 transition-colors shadow-sm"
+                          disabled={loadingAction?.id === req.rawId}
+                          className="flex h-7 min-w-[72px] items-center justify-center gap-1.5 rounded bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Setujui
+                          {loadingAction?.id === req.rawId && loadingAction?.action === 'accept' ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            'Setujui'
+                          )}
                         </button>
                         <button 
                           onClick={() => handleRejectBooking(req.rawId)}
-                          className="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded hover:bg-slate-50 transition-colors"
+                          disabled={loadingAction?.id === req.rawId}
+                          className="flex h-7 min-w-[72px] items-center justify-center gap-1.5 rounded border border-slate-200 bg-white px-4 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Tolak
+                          {loadingAction?.id === req.rawId && loadingAction?.action === 'reject' ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            'Tolak'
+                          )}
                         </button>
                       </div>
                     </td>
@@ -369,17 +393,27 @@ const ReceptionistDashboard = () => {
                       {item.status === 'Disetujui' && (
                         <button 
                           onClick={() => handleCallPatient(item.rawId)}
-                          className="rounded bg-teal-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-teal-700 transition-colors"
+                          disabled={loadingAction?.id === item.rawId}
+                          className="flex h-7 min-w-[70px] items-center justify-center gap-1.5 rounded bg-teal-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Panggil
+                          {loadingAction?.id === item.rawId && loadingAction?.action === 'call' ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            'Panggil'
+                          )}
                         </button>
                       )}
                       {item.status === 'Sedang Diperiksa' && (
                         <button 
                           onClick={() => handleFinishPatient(item.rawId)}
-                          className="rounded bg-slate-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-700 transition-colors"
+                          disabled={loadingAction?.id === item.rawId}
+                          className="flex h-7 min-w-[70px] items-center justify-center gap-1.5 rounded bg-slate-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
                         >
-                          Selesai
+                          {loadingAction?.id === item.rawId && loadingAction?.action === 'finish' ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            'Selesai'
+                          )}
                         </button>
                       )}
                       <button className="text-blue-600 hover:text-blue-800 font-medium text-sm py-1.5">

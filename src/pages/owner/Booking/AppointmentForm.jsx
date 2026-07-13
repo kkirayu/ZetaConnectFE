@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, AlertCircle } from 'lucide-react';
-import { getPets, getServices, createAppointment } from '../../../services/ownerService';
+import { getPets, getServices, createAppointment, getAvailableSessions } from '../../../services/ownerService';
 import { showSuccess, showConfirm } from '../../../utils/alertUtils';
 
 const AppointmentForm = () => {
@@ -26,6 +26,8 @@ const AppointmentForm = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [availableTimes, setAvailableTimes] = useState([]);
+    const [isLoadingTimes, setIsLoadingTimes] = useState(false);
 
     // Handles flat array, { data: [] }, or paginated { data: { data: [] } }
     const extractArray = (res) => {
@@ -72,6 +74,28 @@ const AppointmentForm = () => {
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+
+    useEffect(() => {
+        if (formData.schedule_date) {
+            const fetchTimes = async () => {
+                setIsLoadingTimes(true);
+                setAvailableTimes([]);
+                setFormData(prev => ({ ...prev, schedule_time: '' }));
+                try {
+                    const res = await getAvailableSessions(formData.schedule_date);
+                    const timesArray = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+                    setAvailableTimes(timesArray);
+                } catch (e) {
+                    console.error("Gagal memuat jam tersedia", e);
+                } finally {
+                    setIsLoadingTimes(false);
+                }
+            };
+            fetchTimes();
+        } else {
+            setAvailableTimes([]);
+        }
+    }, [formData.schedule_date]);
 
     // Harga layanan yang dipilih
     const selectedService = servicesData.find(s => String(s.id) === String(formData.service_id)) ?? null;
@@ -297,19 +321,22 @@ const AppointmentForm = () => {
                                     name="schedule_time"
                                     value={formData.schedule_time}
                                     onChange={handleChange}
-                                    className="w-full rounded-md border border-slate-300 bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                                    className="w-full rounded-md border border-slate-300 bg-transparent px-4 py-2.5 text-sm outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-50 disabled:text-slate-400"
                                     required
+                                    disabled={!formData.schedule_date || isLoadingTimes}
                                 >
-                                    <option value="" disabled>Pilih Waktu</option>
-                                    <option value="08:00">08:00 WIB</option>
-                                    <option value="09:00">09:00 WIB</option>
-                                    <option value="10:00">10:00 WIB</option>
-                                    <option value="11:00">11:00 WIB</option>
-                                    <option value="13:00">13:00 WIB</option>
-                                    <option value="14:00">14:00 WIB</option>
-                                    <option value="14:30">14:30 WIB</option>
-                                    <option value="15:00">15:00 WIB</option>
-                                    <option value="16:00">16:00 WIB</option>
+                                    <option value="" disabled>
+                                        {isLoadingTimes ? 'Memuat jadwal...' : (!formData.schedule_date ? 'Pilih tanggal dulu' : 'Pilih Waktu')}
+                                    </option>
+                                    {availableTimes.length > 0 ? (
+                                        availableTimes.map((time, idx) => (
+                                            <option key={idx} value={time}>{time} WIB</option>
+                                        ))
+                                    ) : (
+                                        formData.schedule_date && !isLoadingTimes && (
+                                            <option value="" disabled>Jadwal penuh / tidak tersedia</option>
+                                        )
+                                    )}
                                 </select>
                             </div>
 

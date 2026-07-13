@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Activity, 
@@ -7,77 +7,71 @@ import {
   ShieldAlert, 
   CheckCircle2, 
   UserCheck,
-  ClipboardList
+  ClipboardList,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import api from '../../services/api';
 
 const DoctorDashboard = () => {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const response = await api.get('/doctor/dashboard');
+        const resData = response.data?.data || response.data;
+        setDashboardData(resData);
+      } catch (error) {
+        console.error("Gagal memuat data dashboard", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64 text-blue-500">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2 font-medium">Memuat Dashboard...</span>
+      </div>
+    );
+  }
+
+  const { stats: apiStats, surgerySchedule = [], topDiagnoses = [] } = dashboardData || {};
+
   const stats = [
     {
       title: 'Pasien Hari Ini',
-      value: '24 Pasien',
+      value: `${apiStats?.totalPasien || 0} Pasien`,
       subtitle: 'Total terdaftar hari ini',
       icon: <Users className="text-blue-600 h-6 w-6" />,
       bgIcon: 'bg-blue-100',
     },
     {
       title: 'Antrean Menunggu',
-      value: '8 Pasien',
+      value: `${apiStats?.antreanMenunggu || 0} Pasien`,
       subtitle: 'Perlu segera diperiksa',
       icon: <Clock className="text-amber-600 h-6 w-6" />,
       bgIcon: 'bg-amber-100',
     },
     {
       title: 'Selesai Diperiksa',
-      value: '16 Pasien',
+      value: `${apiStats?.selesaiDiperiksa || 0} Pasien`,
       subtitle: 'Sudah ditangani',
       icon: <UserCheck className="text-emerald-600 h-6 w-6" />,
       bgIcon: 'bg-emerald-100',
     },
     {
       title: 'Tindakan Operasi',
-      value: '3 Prosedur',
+      value: `${apiStats?.tindakanOperasi || 0} Prosedur`,
       subtitle: 'Hari ini',
       icon: <Activity className="text-rose-600 h-6 w-6" />,
       bgIcon: 'bg-rose-100',
     },
-  ];
-
-  const surgerySchedule = [
-    {
-      petName: 'Milo',
-      species: 'Kucing (Persia)',
-      owner: 'Rizky Amelia',
-      procedure: 'Sterilisasi (Kastrasi)',
-      time: '10:00 WIB',
-      status: 'Selesai',
-      statusColor: 'text-emerald-600 bg-emerald-50 border-emerald-200'
-    },
-    {
-      petName: 'Bruno',
-      species: 'Anjing (Golden)',
-      owner: 'Cita Nurcahyani',
-      procedure: 'Scaling Gigi & Pembersihan Karang',
-      time: '14:00 WIB',
-      status: 'Menunggu',
-      statusColor: 'text-amber-600 bg-amber-50 border-amber-200'
-    },
-    {
-      petName: 'Choco',
-      species: 'Hamster',
-      owner: 'Arif Setiawan',
-      procedure: 'Operasi Abses Pipi',
-      time: '16:30 WIB',
-      status: 'Menunggu',
-      statusColor: 'text-amber-600 bg-amber-50 border-amber-200'
-    }
-  ];
-
-  const topDiagnoses = [
-    { label: 'Feline Calicivirus', count: 12, percentage: 50, color: 'bg-blue-600' },
-    { label: 'Scabies / Jamur Kulit', count: 8, percentage: 33, color: 'bg-emerald-500' },
-    { label: 'Parvovirus', count: 3, percentage: 12, color: 'bg-orange-500' },
-    { label: 'Otitis Eksterna', count: 1, percentage: 5, color: 'bg-rose-500' },
   ];
 
   return (
@@ -85,10 +79,10 @@ const DoctorDashboard = () => {
       {/* 1. Header Dashboard */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Halo, Drh. Bunga</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Halo, {user.name || 'Dokter'}</h1>
           <p className="text-sm text-slate-500">Berikut adalah ikhtisar pelayanan pasien dan tindakan medis Anda hari ini.</p>
         </div>
-        <div className="text-sm font-medium text-slate-500">Update terakhir: 10 Mei 2026</div>
+        <div className="text-sm font-medium text-slate-500">Update terakhir: {new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}</div>
       </div>
 
       {/* 2. Stat Cards Grid */}
@@ -126,11 +120,11 @@ const DoctorDashboard = () => {
             </div>
 
             <div className="space-y-4">
-              {surgerySchedule.map((schedule, i) => (
+              {surgerySchedule.length > 0 ? surgerySchedule.map((schedule, i) => (
                 <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded border border-slate-100 bg-slate-50 gap-4">
                   <div className="flex items-start gap-4">
                     <div className="mt-1 flex h-10 w-10 items-center justify-center rounded bg-rose-50 text-rose-600 font-bold">
-                      {schedule.petName[0]}
+                      {schedule.petName?.[0] || '-'}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
@@ -152,7 +146,9 @@ const DoctorDashboard = () => {
                     {schedule.status}
                   </span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-6 text-sm text-slate-500">Tidak ada jadwal operasi / tindakan untuk hari ini.</div>
+              )}
             </div>
           </div>
 
@@ -175,7 +171,7 @@ const DoctorDashboard = () => {
               Kasus Penyakit Terbanyak
             </h3>
             <div className="space-y-5">
-              {topDiagnoses.map((item, i) => (
+              {topDiagnoses.length > 0 ? topDiagnoses.map((item, i) => (
                 <div key={i}>
                   <div className="mb-1.5 flex justify-between text-sm font-medium">
                     <span className="text-slate-700 text-xs sm:text-sm">{item.label}</span>
@@ -188,7 +184,9 @@ const DoctorDashboard = () => {
                     ></div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-6 text-sm text-slate-500">Belum ada data diagnosis.</div>
+              )}
             </div>
           </div>
 

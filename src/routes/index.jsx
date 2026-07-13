@@ -42,6 +42,7 @@ import QueueTicket from '../pages/owner/Booking/QueueTicket';
 import Billing from '../pages/owner/Billing';
 
 import DoctorDashboard from '../pages/doctor/Dashboard';
+import DoctorSchedule from '../pages/doctor/Schedule';
 import WaitingList from '../pages/doctor/WaitingList';
 import DiagnosisReferenceList from '../pages/doctor/MasterData/DiagnosisReference';
 import DiagnosisReferenceForm from '../pages/doctor/MasterData/DiagnosisReferenceForm';
@@ -139,6 +140,7 @@ const AppRouter = () => {
 
         <Route path="/doctor" element={<AdminLayout userRole="doctor" />}>
           <Route index element={<DoctorDashboard />} />
+          <Route path="schedule" element={<DoctorSchedule />} />
           <Route path="waiting-list" element={<WaitingList />} />
           <Route path="soap" element={<SOAPForm />} />
 

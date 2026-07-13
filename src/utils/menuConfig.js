@@ -13,7 +13,8 @@ import {
   FileCheck,
   ShieldAlert,
   Syringe,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react';
 
 export const roleMenus = {
@@ -28,6 +29,7 @@ export const roleMenus = {
   ],
   doctor: [
     { title: 'Dashboard', path: '/doctor', icon: LayoutDashboard },
+    { title: 'Atur Jadwal Praktik', path: '/doctor/schedule', icon: Calendar },
     { title: 'Antrean Pasien', path: '/doctor/waiting-list', icon: Users },
     { title: 'Kamus Penyakit', path: '/doctor/diagnosis', icon: FileText },
     { title: 'Hasil Lab', path: '/doctor/lab-results', icon: Activity },

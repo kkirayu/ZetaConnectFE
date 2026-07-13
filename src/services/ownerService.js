@@ -87,6 +87,11 @@ export const createAppointment = async (appointmentData) => {
   return response.data;
 };
 
+export const getAvailableSessions = async (date) => {
+  const response = await api.get('/available-sessions', { params: { date } });
+  return response.data;
+};
+
 export const getMyAppointments = async (params = {}) => {
   const response = await api.get('/appointments', { params });
   return response.data;
