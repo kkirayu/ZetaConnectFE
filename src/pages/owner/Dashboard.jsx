@@ -21,21 +21,45 @@ const OwnerDashboard = () => {
   const [petsLoading, setPetsLoading] = useState(true);
   const [petsError, setPetsError] = useState(false);
 
-  const [medRecords, setMedRecords] = useState([]);
-  const [medRecordsLoading, setMedRecordsLoading] = useState(true);
-
-  const [unpaidInvoices, setUnpaidInvoices] = useState([]);
-  const [invoicesLoading, setInvoicesLoading] = useState(true);
 
 
-  // Fetch hewan peliharaan milik owner yang login
+  // States for Summary Data
+  const [summaryData, setSummaryData] = useState({
+    total_pets: 0,
+    active_appointments: 0,
+    total_medical_records: 0,
+    pending_billing_amount: 0
+  });
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(false);
+
+  // Fetch summary stats
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        setSummaryLoading(true);
+        setSummaryError(false);
+        const res = await api.get('/owner/dashboard/summary');
+        if (res.data?.success) {
+          setSummaryData(res.data.data);
+        }
+      } catch (err) {
+        console.error('Fetch summary error:', err);
+        setSummaryError(true);
+      } finally {
+        setSummaryLoading(false);
+      }
+    };
+    fetchSummary();
+  }, []);
+
+  // Fetch hewan peliharaan (for names)
   useEffect(() => {
     const fetchPets = async () => {
       try {
         setPetsLoading(true);
         setPetsError(false);
         const res = await api.get('/pets', { params: { owner_id: OWNER_ID } });
-        // Response: { success, data: { data: [...], total, ... } }
         const petList = res.data?.data?.data ?? res.data?.data ?? [];
         setPets(petList);
       } catch (err) {
@@ -49,8 +73,7 @@ const OwnerDashboard = () => {
     fetchPets();
   }, []);
 
-  // Fetch janji temu milik owner (semua status) untuk ditampilkan di dashboard
-  // Diurutkan dari yang paling dekat (schedule_date + schedule_time ascending)
+  // Fetch janji temu terdekat
   const [allAppointments, setAllAppointments] = useState([]);
   const [allApptLoading, setAllApptLoading] = useState(true);
 
@@ -65,8 +88,8 @@ const OwnerDashboard = () => {
 
         // Urutkan ascending: appointment_date dulu, lalu appointment_time
         const sorted = [...list].sort((a, b) => {
-          const dtA = new Date(`${a.appointment_date}T${a.appointment_time ?? '00:00'}`);
-          const dtB = new Date(`${b.appointment_date}T${b.appointment_time ?? '00:00'}`);
+          const dtA = new Date(`${a.schedule_date || a.appointment_date}T${a.schedule_time || a.appointment_time || '00:00'}`);
+          const dtB = new Date(`${b.schedule_date || b.appointment_date}T${b.schedule_time || b.appointment_time || '00:00'}`);
           return dtA - dtB;
         });
 
@@ -78,35 +101,11 @@ const OwnerDashboard = () => {
       }
     };
 
-    const fetchStatsData = async () => {
-      try {
-        setMedRecordsLoading(true);
-        setInvoicesLoading(true);
-
-        const [medRes, invRes] = await Promise.all([
-          api.get('/medical-records', { params: { owner_id: OWNER_ID } }),
-          api.get('/invoices', { params: { owner_id: OWNER_ID, status: 'Unpaid' } })
-        ]);
-
-        const medList = medRes.data?.data?.data ?? medRes.data?.data ?? [];
-        setMedRecords(medList);
-
-        const invList = invRes.data?.data?.data ?? invRes.data?.data ?? [];
-        setUnpaidInvoices(invList);
-      } catch (err) {
-        console.error('Fetch stats data error:', err);
-      } finally {
-        setMedRecordsLoading(false);
-        setInvoicesLoading(false);
-      }
-    };
-
     fetchAllAppointments();
-    fetchStatsData();
   }, []);
 
-  // Hitung appointment berstatus 'Disetujui' dari data yang sudah di-fetch
-  const confirmedAppointments = allAppointments.filter(a => a.status === 'Disetujui');
+  // Filter untuk janji temu aktif
+  const confirmedAppointments = allAppointments.filter(a => ['Menunggu', 'Disetujui', 'Diperiksa'].includes(a.status));
 
   // Subtitle janji temu: tanggal appointment disetujui terdekat
   const apptSubtitle = () => {
@@ -132,43 +131,43 @@ const OwnerDashboard = () => {
   const stats = [
     {
       title: 'Hewan Peliharaanku',
-      value: petsLoading
+      value: summaryLoading
         ? <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-        : petsError
+        : summaryError
           ? <span className="text-base text-red-500">Error</span>
-          : `${pets.length} Ekor`,
+          : `${summaryData.total_pets} Ekor`,
       subtitle: petNames(),
       icon: <Dog className="text-blue-600 h-6 w-6" />,
       bgIcon: 'bg-blue-100',
     },
     {
       title: 'Janji Temu Aktif',
-      value: allApptLoading
+      value: summaryLoading
         ? <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-        : `${confirmedAppointments.length} Jadwal`,
+        : `${summaryData.active_appointments} Jadwal`,
       subtitle: apptSubtitle(),
       icon: <Calendar className="text-emerald-600 h-6 w-6" />,
       bgIcon: 'bg-emerald-100',
     },
     {
       title: 'Riwayat Rekam Medis',
-      value: medRecordsLoading
+      value: summaryLoading
         ? <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
-        : `${medRecords.length} Catatan`,
-      subtitle: medRecords.length > 0 
-        ? `Terakhir: ${new Date(medRecords[0]?.created_at || new Date()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+        : `${summaryData.total_medical_records} Catatan`,
+      subtitle: summaryData.total_medical_records > 0 
+        ? `Riwayat kesehatan hewan Anda`
         : 'Tidak ada riwayat',
       icon: <FileText className="text-orange-600 h-6 w-6" />,
       bgIcon: 'bg-orange-100',
     },
     {
       title: 'Tagihan Tertunda',
-      value: invoicesLoading
+      value: summaryLoading
         ? <Loader2 className="h-6 w-6 animate-spin text-rose-600" />
         : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(
-            unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0)
+            summaryData.pending_billing_amount
           ),
-      subtitle: unpaidInvoices.length > 0 ? `${unpaidInvoices.length} Invoice Belum Lunas` : 'Tidak ada tagihan tertunda',
+      subtitle: summaryData.pending_billing_amount > 0 ? 'Harap selesaikan pembayaran' : 'Tidak ada tagihan tertunda',
       icon: <DollarSign className="text-rose-600 h-6 w-6" />,
       bgIcon: 'bg-rose-100',
     },
