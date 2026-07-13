@@ -81,10 +81,10 @@ const AppointmentHistory = () => {
               historyData.map((item, index) => {
                 const petName = item.pet?.name || `Pet #${item.pet_id}`;
                 const serviceName = item.service?.name || item.initial_complaint || '-';
-                const dateStr = item.appointment_date 
-                  ? new Date(item.appointment_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                const dateStr = item.schedule_date 
+                  ? new Date(item.schedule_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                   : '-';
-                const timeStr = item.appointment_time || '-';
+                const timeStr = item.schedule_time ? item.schedule_time.substring(0, 5) : '-';
                 
                 return (
                   <tr 
