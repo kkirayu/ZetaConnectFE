@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, Clock, CheckCircle, Search, Loader2, FileText, Activity, AlertTriangle, X } from 'lucide-react';
 import api from '../../services/api';
+import { showError } from '../../utils/alertUtils';
 
 const WaitingList = () => {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const WaitingList = () => {
             petType: appt.pet?.species || 'Spesies Tidak Diketahui',
             status: appt.status || 'Menunggu',
             time: appt.schedule_time || '00:00',
+            date: appt.schedule_date || '-',
             image: `https://ui-avatars.com/api/?name=${encodeURIComponent(appt.pet?.owner?.name || appt.owner?.name || 'U')}&background=random`
           };
         });
@@ -116,9 +118,12 @@ const WaitingList = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1 text-slate-500">
-                        <Clock className="h-4 w-4" />
-                        <span>{patient.time}</span>
+                      <div className="flex flex-col gap-1 text-slate-500">
+                        <div className="font-semibold text-slate-700">{patient.date}</div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{patient.time}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -141,8 +146,20 @@ const WaitingList = () => {
                         </Link>
                         {patient.status !== 'Selesai' && (
                           <button
-                            onClick={() => setSelectedPatientForExam(patient)}
-                            className="flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
+                            onClick={() => {
+                              const todayStr = new Date().toISOString().split('T')[0];
+                              if (patient.date !== todayStr) {
+                                showError('Belum Waktunya', 'Pemeriksaan hanya dapat dilakukan pada hari jadwal yang bersangkutan.');
+                                return;
+                              }
+                              setSelectedPatientForExam(patient);
+                            }}
+                            className={`flex items-center gap-1 rounded px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors ${
+                              patient.date === new Date().toISOString().split('T')[0]
+                                ? 'bg-blue-600 hover:bg-blue-700'
+                                : 'bg-slate-400 hover:bg-slate-500 cursor-not-allowed'
+                            }`}
+                            title={patient.date === new Date().toISOString().split('T')[0] ? '' : 'Belum waktunya'}
                           >
                             <FileText className="h-3.5 w-3.5" /> 
                             {patient.status === 'Sedang Diperiksa' ? 'Lanjutkan' : 'Periksa'}

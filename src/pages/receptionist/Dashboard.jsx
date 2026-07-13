@@ -22,13 +22,25 @@ const ReceptionistDashboard = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState(null);
+  const [detailModal, setDetailModal] = useState(null);
 
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/appointments?date=${selectedDate}`);
-        setAppointments(response.data.data.data || []);
+        const [pendingRes, dayRes] = await Promise.all([
+          api.get('/appointments?status=Menunggu'),
+          api.get(`/appointments?date=${selectedDate}`)
+        ]);
+        
+        const pending = pendingRes.data.data.data || [];
+        const dayList = dayRes.data.data.data || [];
+        
+        const mergedMap = new Map();
+        pending.forEach(a => mergedMap.set(a.id, a));
+        dayList.forEach(a => mergedMap.set(a.id, a));
+        
+        setAppointments(Array.from(mergedMap.values()));
       } catch (err) {
         console.error("Error fetching appointments:", err);
       } finally {
@@ -127,7 +139,7 @@ const ReceptionistDashboard = () => {
     }));
 
   const queueData = appointments
-    .filter(a => !(a.status === 'Menunggu' && a.booking_type === 'Online') && a.status !== 'Batal' && a.status !== 'Selesai')
+    .filter(a => a.schedule_date === selectedDate && !(a.status === 'Menunggu' && a.booking_type === 'Online') && a.status !== 'Batal')
     .map(a => ({
       rawId: a.id,
       id: a.queue_number,
@@ -137,12 +149,15 @@ const ReceptionistDashboard = () => {
       doctor: a.doctor?.name || '-',
       status: (a.status === 'Dalam Periksa') ? 'Sedang Diperiksa' : a.status,
       time: a.schedule_time?.slice(0,5) || '-',
+      date: a.schedule_date || '-',
+      type: a.service?.name || '-',
+      complaint: a.complaint || '-'
     }));
 
   const stats = [
     {
       title: 'Total Antrian',
-      value: queueData.length + bookingRequests.length,
+      value: queueData.length + bookingRequests.filter(r => r.date === selectedDate).length,
       icon: <Users className="text-blue-600 h-6 w-6" />,
       bgIcon: 'bg-blue-100',
     },
@@ -416,7 +431,10 @@ const ReceptionistDashboard = () => {
                           )}
                         </button>
                       )}
-                      <button className="text-blue-600 hover:text-blue-800 font-medium text-sm py-1.5">
+                      <button 
+                        onClick={() => setDetailModal(item)}
+                        className="text-blue-600 hover:text-blue-800 font-medium text-sm py-1.5"
+                      >
                         Detail
                       </button>
                     </td>
@@ -452,6 +470,60 @@ const ReceptionistDashboard = () => {
             >
               Tutup
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* DETAIL MODAL */}
+      {detailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setDetailModal(null)}></div>
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-slate-800 mb-4 border-b pb-3">Detail Antrean</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">No. Antrean</span>
+                <span className="font-semibold text-slate-800">{detailModal.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nama Pasien</span>
+                <span className="font-semibold text-slate-800">{detailModal.petName} ({detailModal.species})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Pemilik</span>
+                <span className="font-semibold text-slate-800">{detailModal.ownerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Dokter</span>
+                <span className="font-semibold text-slate-800">{detailModal.doctor}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Layanan</span>
+                <span className="font-semibold text-slate-800">{detailModal.type || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Jadwal</span>
+                <span className="font-semibold text-slate-800">{detailModal.date} - {detailModal.time} WIB</span>
+              </div>
+              <div className="flex justify-between border-t pt-3">
+                <span className="text-slate-500">Keluhan Awal</span>
+                <span className="font-medium text-slate-800 text-right w-1/2">{detailModal.complaint || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-slate-500">Status Saat Ini</span>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusColor(detailModal.status)}`}>
+                  {detailModal.status}
+                </span>
+              </div>
+            </div>
+            <div className="mt-6">
+              <button
+                onClick={() => setDetailModal(null)}
+                className="w-full rounded-lg bg-slate-100 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-200"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}
