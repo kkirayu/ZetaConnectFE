@@ -4,25 +4,40 @@ import {
   Receipt, AlertTriangle, CheckCircle2, Printer, Lock, LogOut 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-
-const todayTransactions = [
-  { id: 'TRX-001', time: '08:30', invoice: 'INV-260520-001', customer: 'Bpk. Ahmad Subarjo', method: 'QRIS', total: 535000 },
-  { id: 'TRX-002', time: '09:15', invoice: 'INV-260520-002', customer: 'Ibu Sarah', method: 'Tunai', total: 120000 },
-  { id: 'TRX-003', time: '11:00', invoice: 'INV-260520-003', customer: 'Sisca Kohl', method: 'QRIS', total: 850000 },
-  { id: 'TRX-004', time: '13:45', invoice: 'INV-260520-004', customer: 'Bpk. Budi Santoso', method: 'Tunai', total: 300000 },
-  { id: 'TRX-005', time: '15:20', invoice: 'INV-260520-005', customer: 'Ibu Rina', method: 'Tunai', total: 45000 },
-];
+import { getShiftSummary, closeShift } from '../../../services/cashierDashboardService';
 
 const ShiftClosing = () => {
   const navigate = useNavigate();
   
-  // --- STATE REKONSILIASI KAS ---
+  // --- STATE ---
   const [actualCash, setActualCash] = useState('');
   const [isShiftClosed, setIsShiftClosed] = useState(false);
+  const [todayTransactions, setTodayTransactions] = useState([]);
+  const [startingCash, setStartingCash] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Modal awal (uang kembalian) di laci kasir saat buka shift
-  const startingCash = 500000; 
+  const fetchShiftData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getShiftSummary();
+      if (data) {
+        setTodayTransactions(data.transactions || []);
+        setStartingCash(data.starting_cash || 0);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Gagal memuat data shift.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchShiftData();
+  }, []);
 
   // --- PERHITUNGAN REKAPITULASI ---
   const summary = useMemo(() => {
@@ -37,7 +52,7 @@ const ShiftClosing = () => {
     });
 
     return { totalRevenue, cashRevenue, qrisRevenue, count: todayTransactions.length };
-  }, []);
+  }, [todayTransactions]);
 
   const expectedCash = startingCash + summary.cashRevenue;
   const cashDifference = actualCash !== '' ? Number(actualCash) - expectedCash : null;
@@ -47,7 +62,7 @@ const ShiftClosing = () => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
-  const handleCloseShift = () => {
+  const handleCloseShift = async () => {
     if (actualCash === '') {
       alert('Silakan masukkan jumlah uang fisik di laci terlebih dahulu!');
       return;
@@ -58,13 +73,58 @@ const ShiftClosing = () => {
       : 'Uang kas sesuai. Yakin ingin menutup shift?';
 
     if (window.confirm(confirmMessage)) {
-      setIsShiftClosed(true);
+      setSubmitting(true);
+      try {
+        await closeShift({
+          actual_cash: Number(actualCash),
+          expected_cash: expectedCash,
+          difference: cashDifference,
+          total_revenue: summary.totalRevenue,
+          cash_revenue: summary.cashRevenue,
+          qris_revenue: summary.qrisRevenue
+        });
+        setIsShiftClosed(true);
+        alert('Shift berhasil ditutup!');
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Gagal menutup shift. Silakan coba lagi.');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
   const handleNewShift = () => {
     navigate('/login');
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center gap-2 text-slate-500 min-h-[400px]">
+        <span className="font-medium">Memuat Data Shift...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto my-8">
+        <div className="bg-red-50 border border-red-200 rounded-md p-6 text-center shadow-sm">
+          <div className="flex justify-center mb-3 text-red-500">
+            <AlertTriangle size={40} />
+          </div>
+          <h3 className="text-lg font-bold text-red-800 mb-2">Gagal Memuat Data Shift</h3>
+          <p className="text-sm text-red-600 mb-6">{error}</p>
+          <button
+            onClick={fetchShiftData}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-sm text-sm font-semibold hover:bg-red-700 transition shadow-sm"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -147,21 +207,29 @@ const ShiftClosing = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {todayTransactions.map((trx) => (
-                  <tr key={trx.id} className="transition-colors duration-200 hover:bg-slate-100">
-                    <td className="px-5 py-3 text-slate-600">{trx.time}</td>
-                    <td className="px-5 py-3 font-medium text-blue-600">{trx.invoice}</td>
-                    <td className="px-5 py-3 text-slate-800">{trx.customer}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200 ${
-                        trx.method === 'QRIS' ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'
-                      }`}>
-                        {trx.method}
-                      </span>
+                {todayTransactions.length > 0 ? (
+                  todayTransactions.map((trx) => (
+                    <tr key={trx.id} className="transition-colors duration-200 hover:bg-slate-100">
+                      <td className="px-5 py-3 text-slate-600">{trx.time}</td>
+                      <td className="px-5 py-3 font-medium text-blue-600">{trx.invoice}</td>
+                      <td className="px-5 py-3 text-slate-800">{trx.customer}</td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium transition-colors duration-200 ${
+                          trx.method === 'QRIS' ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'
+                        }`}>
+                          {trx.method}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-right font-medium text-slate-800">{formatRupiah(trx.total)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-5 py-8 text-center text-slate-500 font-medium">
+                      Belum ada transaksi hari ini.
                     </td>
-                    <td className="px-5 py-3 text-right font-medium text-slate-800">{formatRupiah(trx.total)}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -243,9 +311,10 @@ const ShiftClosing = () => {
             ) : (
               <button 
                 onClick={handleCloseShift}
-                className="w-full rounded-lg bg-emerald-600 py-3.5 font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg active:translate-y-0"
+                disabled={submitting}
+                className="w-full rounded-lg bg-emerald-600 py-3.5 font-bold text-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-lg active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Simpan & Tutup Shift
+                {submitting ? 'Menyimpan...' : 'Simpan & Tutup Shift'}
               </button>
             )}
           </div>
