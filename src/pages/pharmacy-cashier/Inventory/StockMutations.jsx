@@ -138,6 +138,43 @@ const StockMutations = () => {
 
 }, [mutationData]);
 
+  const handleExportCSV = () => {
+    if (!mutationData || mutationData.length === 0) {
+      alert("Tidak ada data untuk diekspor");
+      return;
+    }
+
+    // Header CSV
+    const headers = ["ID", "Produk", "ID Produk", "Supplier", "Tipe", "Jumlah", "Tanggal Mutasi"];
+    
+    // Baris data
+    const rows = mutationData.map(item => {
+      return [
+        item.id,
+        `"${item.product_name}"`,
+        item.product_id,
+        `"${item.supplier_name || '-'}"`,
+        item.mutation_type,
+        item.quantity,
+        `"${formatDate(item.date)}"`
+      ].join(",");
+    });
+
+    // Gabungkan header dan baris data
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    
+    // Buat Blob dan trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Laporan_Mutasi_Stok_${new Date().getTime()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* 1. Header */}
@@ -147,7 +184,10 @@ const StockMutations = () => {
           <p className="mt-1 text-sm font-medium text-slate-500">Riwayat barang masuk (In) dan barang keluar (Out) dari gudang farmasi.</p>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 shadow-sm">
+          <button 
+            onClick={handleExportCSV}
+            className="inline-flex items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 shadow-sm"
+          >
             <FileText className="h-4 w-4" />
             Export Laporan
           </button>

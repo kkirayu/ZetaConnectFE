@@ -20,6 +20,7 @@ const CashierDashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('Semua');
 
   // Modal State
   const [selectedQueue, setSelectedQueue] = useState(null);
@@ -180,20 +181,30 @@ const CashierDashboard = () => {
 
         {/* Secondary Status Counters */}
         <div className="col-span-12 lg:col-span-4 grid grid-rows-3 gap-3">
-          {shiftStats.map((stat, index) => (
-            <div key={index} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm hover:border-blue-500 transition-colors cursor-default">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full ${stat.bgIcon} flex items-center justify-center`}>
-                  {stat.icon}
+          {shiftStats.map((stat, index) => {
+            const statusMap = ['Diproses', 'Menunggu', 'Selesai'];
+            const filterValue = statusMap[index];
+            const isActive = activeFilter === filterValue;
+
+            return (
+              <div 
+                key={index} 
+                onClick={() => setActiveFilter(isActive ? 'Semua' : filterValue)}
+                className={`bg-white border rounded-xl p-4 flex items-center justify-between shadow-sm transition-colors cursor-pointer ${isActive ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10' : 'border-slate-200 hover:border-blue-500'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full ${stat.bgIcon} flex items-center justify-center`}>
+                    {stat.icon}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-400">{stat.title}</p>
+                    <p className="text-base font-bold text-slate-800">{stat.value}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-400">{stat.title}</p>
-                  <p className="text-base font-bold text-slate-800">{stat.value}</p>
-                </div>
+                <ChevronRight className="h-5 w-5 text-slate-400" />
               </div>
-              <ChevronRight className="h-5 w-5 text-slate-400" />
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>
@@ -248,8 +259,10 @@ const CashierDashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-slate-700">
-              {data.queue_list.length > 0 ? (
-                data.queue_list.map((queue, i) => {
+              {(() => {
+                const filteredQueue = data.queue_list.filter(queue => activeFilter === 'Semua' || queue.status === activeFilter);
+                return filteredQueue.length > 0 ? (
+                  filteredQueue.map((queue, i) => {
                   let statusBg = 'bg-slate-100 text-slate-700';
                   if (queue.status === 'Diproses') statusBg = 'bg-emerald-100 text-emerald-700';
                   else if (queue.status === 'Menunggu') statusBg = 'bg-orange-100 text-orange-700';
@@ -298,14 +311,15 @@ const CashierDashboard = () => {
                       </td>
                     </tr>
                   )
-                })
-              ) : (
-                <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium bg-slate-50/30">
-                    Belum ada antrean untuk hari ini.
-                  </td>
-                </tr>
-              )}
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium bg-slate-50/30">
+                      Belum ada antrean untuk hari ini atau tidak ada data yang cocok dengan filter.
+                    </td>
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
