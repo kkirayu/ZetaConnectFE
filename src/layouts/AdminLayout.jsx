@@ -16,9 +16,18 @@ const AdminLayout = ({ userRole = 'admin' }) => {
     navigate('/login');
   };
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
-  
   const currentMenus = roleMenus[userRole] || [];
+
+  const bestMatch = currentMenus.reduce((best, menu) => {
+    if (location.pathname === menu.path || location.pathname.startsWith(`${menu.path}/`)) {
+      if (!best || menu.path.length > best.path.length) {
+        return menu;
+      }
+    }
+    return best;
+  }, null);
+
+  const isActive = (path) => bestMatch && bestMatch.path === path;
 
   const displayNames = {
     admin: 'Admin Sistem',

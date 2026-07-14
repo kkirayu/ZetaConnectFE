@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Package, X, Calendar, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Plus, Edit, Trash2, Package, X, Calendar, AlertCircle, RefreshCw, Loader2, AlertTriangle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getProducts, deleteProduct } from '../../../services/pharmacyService';
 
@@ -126,6 +126,49 @@ const StockMonitoring = () => {
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  const cardStats = useMemo(() => {
+    const totalProducts = productData.length;
+    
+    const lowStock = productData.filter(
+      p => p.current_stock <= p.min_stock && p.current_stock > 0
+    ).length;
+
+    const outOfStock = productData.filter(
+      p => p.current_stock === 0 || p.stock_status === 'Habis'
+    ).length;
+
+    const expiredProducts = productData.filter(
+      p => p.is_expired
+    ).length;
+
+    return [
+      {
+        title: "Total Produk",
+        value: totalProducts,
+        icon: <Package className="h-6 w-6 text-blue-600" />,
+        bgIcon: "bg-blue-100",
+      },
+      {
+        title: "Stok Menipis",
+        value: lowStock,
+        icon: <AlertTriangle className="h-6 w-6 text-orange-600" />,
+        bgIcon: "bg-orange-100",
+      },
+      {
+        title: "Stok Habis",
+        value: outOfStock,
+        icon: <XCircle className="h-6 w-6 text-red-600" />,
+        bgIcon: "bg-red-100",
+      },
+      {
+        title: "Kedaluwarsa",
+        value: expiredProducts,
+        icon: <AlertCircle className="h-6 w-6 text-purple-600" />,
+        bgIcon: "bg-purple-100",
+      }
+    ];
+  }, [productData]);
+
   return (
     <div className="space-y-6 relative">
       {/* 1. Header & Breadcrumb */}
@@ -141,6 +184,45 @@ const StockMonitoring = () => {
           <Plus className="h-4 w-4" />
           Tambah Produk
         </Link>
+      </div>
+
+      {/* Card Stats */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {cardStats.map((stat, index) => (
+          <div
+            key={index}
+            className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+          >
+            {/* Top Accent */}
+            <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-600" />
+
+            <div className="flex items-center justify-between p-6">
+              {/* Left */}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-500">
+                  {stat.title}
+                </p>
+
+                <h2 className="mt-3 text-5xl font-bold tracking-tight text-slate-800">
+                  {stat.value}
+                </h2>
+
+                <div className="mt-4 inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+                  Ringkasan Data
+                </div>
+              </div>
+
+              {/* Right Icon */}
+              <div
+                className={`flex h-20 w-20 items-center justify-center rounded-2xl ${stat.bgIcon} transition-transform duration-300 group-hover:scale-110`}
+              >
+                {React.cloneElement(stat.icon, {
+                  className: stat.icon.props.className.replace("h-6 w-6", "h-9 w-9"),
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* 2. Area Tabel Utama */}
