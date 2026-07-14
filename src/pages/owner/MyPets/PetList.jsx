@@ -8,22 +8,13 @@ const PetList = () => {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const ownerId = storedUser.id || 1;
 
-  const [petsData, setPetsData] = useState(() => {
-    const cached = sessionStorage.getItem('cached_pets');
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [isLoading, setIsLoading] = useState(() => !sessionStorage.getItem('cached_pets'));
+  const [petsData, setPetsData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSpecies, setFilterSpecies] = useState('');
 
   const fetchPets = async () => {
-    // Jika data sudah ada di cache, tidak perlu fetch lagi dari API
-    if (sessionStorage.getItem('cached_pets')) {
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     try {
@@ -49,7 +40,6 @@ const PetList = () => {
       );
 
       setPetsData(pets);
-      sessionStorage.setItem('cached_pets', JSON.stringify(pets));
     } catch (err) {
       console.error(err);
       setError('Gagal memuat data pets. Pastikan server berjalan.');
@@ -74,7 +64,6 @@ const PetList = () => {
         await deletePet(id);
         const updatedPets = petsData.filter(pet => pet.id !== id);
         setPetsData(updatedPets);
-        sessionStorage.setItem('cached_pets', JSON.stringify(updatedPets));
       } catch (err) {
         console.error(err);
         showError('Gagal', 'Gagal menghapus data pet. Silakan coba lagi.');
