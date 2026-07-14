@@ -7,6 +7,7 @@ import { doctorService } from '../../../services/doctorService';
 const SurgeryReport = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Menangkap transferan data antrean operasi dari dashboard utama (jika ada)
   const { activeSurgery } = location.state || {};
@@ -83,7 +84,7 @@ const SurgeryReport = () => {
     // Payload diketatkan presisi mengikuti model & SurgeryResource backend
     const payload = {
       pet_id: parseInt(formData.pet_id),
-      doctor_id: 1, // Fallback ID Drh. Bunga / Dokter yang bertugas
+      doctor_id: user.id || 1, // Mengambil ID dari user login
       surgery_type: formData.surgery_type,
       anesthesia_notes: formData.anesthesia_notes,
       post_op_instructions: formData.post_op_instructions
@@ -145,7 +146,7 @@ const SurgeryReport = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Dokter Bedah</label>
-              <p className="text-sm font-semibold text-slate-800">Drh. Bunga</p>
+              <p className="text-sm font-semibold text-slate-800">{user.name || 'Dokter'}</p>
             </div>
           </div>
 

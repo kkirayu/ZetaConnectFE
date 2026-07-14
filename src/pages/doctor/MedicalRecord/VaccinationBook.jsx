@@ -7,6 +7,7 @@ import { doctorService } from '../../../services/doctorService';
 const VaccinationBook = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   // Menangkap transferan data context dari antrean konsultasi/vaksinasi di dashboard (jika ada)
   const { activeVaccination } = location.state || {};
@@ -85,7 +86,7 @@ const VaccinationBook = () => {
     // Payload tabel backend vaccinations
     const payload = {
       pet_id: parseInt(formData.pet_id),
-      doctor_id: 1, // Default ID dokter bertugas (Drh. Bunga)
+      doctor_id: user.id || 1, // Mengambil ID dari user login
       vaccine_name: formData.vaccine_name,
       batch_number: formData.batch_number,
       next_due_date: formData.next_due_date || null // Mengantisipasi error jika dikosongkan
@@ -148,7 +149,7 @@ const VaccinationBook = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Dokter Pemeriksa</label>
-              <p className="text-sm font-semibold text-slate-800">Drh. Bunga</p>
+              <p className="text-sm font-semibold text-slate-800">{user.name || 'Dokter'}</p>
             </div>
           </div>
 

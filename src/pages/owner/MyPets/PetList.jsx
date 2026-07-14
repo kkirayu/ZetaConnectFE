@@ -41,6 +41,13 @@ const PetList = () => {
       } else if (Array.isArray(res.data?.data?.data)) {
         pets = res.data.data.data;
       }
+
+      // Filter hanya hewan milik user yang sedang login
+      pets = pets.filter(p => 
+        parseInt(p.owner_id) === parseInt(ownerId) || 
+        (p.owner && parseInt(p.owner.id) === parseInt(ownerId))
+      );
+
       setPetsData(pets);
       sessionStorage.setItem('cached_pets', JSON.stringify(pets));
     } catch (err) {
